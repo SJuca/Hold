@@ -1,6 +1,4 @@
-SELECT uzenet.tartalom
-FROM uzenet
-WHERE (uzenet.tartalom LIKE '%bike%') OR (uzenet.tartalom LIKE '%bicikli%');<!doctype html>
+<!doctype html>
 <html lang="hu">
 <head>
 <meta charset="utf-8" />
@@ -104,6 +102,10 @@ WHERE (uzenet.tartalom LIKE '%bike%') OR (uzenet.tartalom LIKE '%bicikli%');<!do
   </div>
 
 <script>
+// Holdfázis-kvíz logika (magyar nyelven)
+// A modell: Nap fixen balra (-220,0). Föld: körpálya sugara 140. A Hold a Föld körül 36 egységre.
+// A fázist a Nap-Föld-Moon szög (elongáció) határozza meg: 0 = újhold (Moon a Nap irányában a Földtől nézve), 180 = telihold.
+
 const SUN = {x:-220,y:0};
 const earthOrbitR = 140;
 const moonOrbitR = 36;
@@ -113,27 +115,32 @@ let lastState = null;
 
 const phaseNames = [
   'Újhold',
-  'Növekvő sarló',
+  'Növekvő sarló (waxing crescent)',
   'Első negyed',
-  'Dagadó Hold',
+  'Növekvő gibózus',
   'Telihold',
-  'Csökkenő Hold',
+  'Csökkenő gibózus',
   'Utolsó negyed',
-  'Csökkenő sarló'
+  'Csökkenő sarló (waning crescent)'
 ];
 
 function degToRad(d){return d*Math.PI/180}
 function radToDeg(r){return r*180/Math.PI}
+
 function randRange(a,b){return a + Math.random()*(b-a)}
 
 function placeRandomScenario(){
+  // choose random Earth's true anomaly (angle around Sun): 0..360
   const earthAngle = randRange(0,360);
+  // place earth at orbit
   const ex = earthOrbitR * Math.cos(degToRad(earthAngle));
   const ey = earthOrbitR * Math.sin(degToRad(earthAngle));
+  // choose moon angle around earth randomly 0..360
   const moonAngle = randRange(0,360);
   const mx = ex + moonOrbitR * Math.cos(degToRad(moonAngle));
   const my = ey + moonOrbitR * Math.sin(degToRad(moonAngle));
   lastState = {ex,ey,mx,my,earthAngle,moonAngle};
+  // compute elongation: angle Sun-Earth-Moon
   const vSun = {x: SUN.x - ex, y: SUN.y - ey};
   const vMoon = {x: mx - ex, y: my - ey};
   const dot = vSun.x*vMoon.x + vSun.y*vMoon.y;
@@ -141,17 +148,21 @@ function placeRandomScenario(){
   const magM = Math.hypot(vMoon.x,vMoon.y);
   let cosEl = dot/(magS*magM);
   cosEl = Math.max(-1, Math.min(1, cosEl));
-  let elRad = Math.acos(cosEl);
-  const cross = vSun.x*vMoon.y - vSun.y*vMoon.x;
+  let elRad = Math.acos(cosEl); // 0..pi
+  // determine sign using cross product to know waxing/waning
+  const cross = vSun.x*vMoon.y - vSun.y*vMoon.x; // >0 => moon is east of sun (iirc).
   let elDeg = radToDeg(elRad);
-  if(cross < 0) elDeg = 360 - elDeg;
-  const sector = Math.round(elDeg / 45) % 8;
+  // If cross < 0, we can treat elongation as 360 - elDeg to map position around
+  if(cross < 0) elDeg = 360 - elDeg; // 0..360
+  // map elDeg to phase index (8 sectors)
+  const sector = Math.round(elDeg / 45) % 8; // 0..7
   correctPhase = sector;
   renderScene(lastState, elDeg);
   populateChoices();
 }
 
 function renderScene(state, elDeg){
+  // update SVG transforms
   const earthGroup = document.getElementById('earthGroup');
   earthGroup.setAttribute('transform', `translate(${state.ex},${state.ey})`);
   const moonOrbit = document.getElementById('moonOrbit');
@@ -163,14 +174,21 @@ function renderScene(state, elDeg){
   document.getElementById('moonPhase').setAttribute('cy', (state.my - state.ey));
   document.getElementById('maskCircle').setAttribute('cx', (state.mx - state.ex));
   document.getElementById('maskCircle').setAttribute('cy', (state.my - state.ey));
+  // update label (hidden from user for quiz, but shown for debug if needed)
   const lbl = document.getElementById('phaseLabel');
   lbl.textContent = `Elongáció: ${elDeg.toFixed(0)}°`;
+  // compute visible phase shading on moon: we'll mask half based on direction to Sun
+  // Compute direction from moon to sun in moon-local coords (centered at moon)
   const sunRel = {x: SUN.x - state.mx, y: SUN.y - state.my};
+  // angle of sunlight on moon
   const sunAngle = Math.atan2(sunRel.y, sunRel.x);
-  const offset = 10;
+  // For simple visual, position a black circle offset opposite sunDir to create terminator
+  const offset = 10; // how strong shadow offset
   const maskCircle = document.getElementById('maskCircle');
+  // place mask center relative to moon
   const mx_rel = state.mx - state.ex;
   const my_rel = state.my - state.ey;
+  // mask center: move a bit towards sun direction to darken opposite side
   const mcx = mx_rel + Math.cos(sunAngle) * offset;
   const mcy = my_rel + Math.sin(sunAngle) * offset;
   maskCircle.setAttribute('cx', mcx);
@@ -180,9 +198,11 @@ function renderScene(state, elDeg){
 function populateChoices(){
   const container = document.getElementById('choices');
   container.innerHTML = '';
+  // prepare choices: include correct and 3 random other unique
   const options = new Set();
   options.add(correctPhase);
   while(options.size < 4){ options.add(Math.floor(Math.random()*8)); }
+  // shuffle options array
   const arr = Array.from(options).sort(()=>Math.random()-0.5);
   arr.forEach(idx=>{
     const b = document.createElement('button');
@@ -193,6 +213,7 @@ function populateChoices(){
 }
 
 function handleAnswer(selectedBtnIdx, btnElement){
+  // prevent multiple answers
   const feedback = document.getElementById('feedback');
   if(document.body.dataset.awaiting) return;
   document.body.dataset.awaiting = '1';
@@ -201,11 +222,14 @@ function handleAnswer(selectedBtnIdx, btnElement){
   else { feedback.className='status wrong'; feedback.textContent = 'Helytelen — helyes válasz: ' + phaseNames[correctPhase]; }
   questionCount++;
   updateProgress();
+  // highlight chosen button briefly
   btnElement.style.outline = isCorrect ? '3px solid rgba(22,163,74,0.22)' : '3px solid rgba(239,68,68,0.16)';
   setTimeout(()=>{ btnElement.style.outline=''; }, 900);
+  // if reached 5, finish
   if(questionCount >= 5){
     setTimeout(()=>finalizeQuiz(), 900);
   } else {
+    // auto next scenario after short delay
     setTimeout(()=>{
       document.body.dataset.awaiting = '';
       document.getElementById('feedback').textContent='';
@@ -222,9 +246,11 @@ function updateProgress(){
 function finalizeQuiz(){
   document.body.dataset.awaiting = '';
   document.getElementById('final').innerHTML = `<div style="padding:12px;border-radius:8px;background:linear-gradient(90deg,rgba(255,209,102,0.07),transparent);font-weight:700">Végső eredmény: ${score}/5 pont<br><span class=\"small\">Kattints az Újrakezd gombra egy új körhöz.</span></div>`;
+  // disable choices
   document.getElementById('choices').querySelectorAll('button').forEach(b=>b.disabled=true);
 }
 
+// Controls
 document.getElementById('nextBtn').addEventListener('click', ()=>{
   if(questionCount >=5) return;
   placeRandomScenario();
@@ -235,6 +261,7 @@ document.getElementById('resetBtn').addEventListener('click', ()=>{
 });
 
 document.getElementById('explainBtn').addEventListener('click', ()=>{
+  // show short magyarázat
   const explan = explainPhase(correctPhase);
   const fb = document.getElementById('feedback');
   fb.className='status'; fb.innerHTML = `<strong>Magyarázat:</strong> ${explan}`;
@@ -246,13 +273,13 @@ function explainPhase(idx){
     case 0: return 'Újhold: a Hold a Föld felől nézve a Nap felé áll — a megvilágított oldala távol van tőlünk.';
     case 1: return 'Növekvő sarló: a Hold részben megvilágított, a növekedés (waxing) felé tart.';
     case 2: return 'Első negyed: a Hold fele megvilágított, a Földről jobbra fényes (növekvő negyed).';
-    case 3: return 'Dagadó Hold: a Hold több mint fele megvilágított, közelít a teliholdhoz.';
+    case 3: return 'Növekvő gibózus: a Hold több mint fele megvilágított, közelít a teliholdhoz.';
     case 4: return 'Telihold: a Hold teljesen megvilágított a Földről nézve (Nap és Hold ellentétes oldalon).';
-    case 5: return 'Csökkenő Hold: a Hold telihold után csökken (waning) és több mint fele megvilágított.';
+    case 5: return 'Csökkenő gibózus: a Hold telihold után csökken (waning) és több mint fele megvilágított.';
     case 6: return 'Utolsó negyed: a Hold másik fele megvilágított (a fény lentebb helyezkedik el).';
-    case 7: return 'Csökkenő sarló: a Hold kicsi megvilágított sarló formában, a
-
-}
+    case 7: return 'Csökkenő sarló: a Hold kicsi megvilágított sarló formában, a ciklus végén.';
+    default: return '';
+  }
 }
 
 // init
