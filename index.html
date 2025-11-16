@@ -1,0 +1,253 @@
+SELECT uzenet.tartalom
+FROM uzenet
+WHERE (uzenet.tartalom LIKE '%bike%') OR (uzenet.tartalom LIKE '%bicikli%');<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Holdfázis-kvíz — Föld‑Nap‑Hold</title>
+<style>
+  :root{--bg:#071427;--card:#071a2a;--accent:#ffd166;--muted:#9fb3c8;--good:#16a34a;--bad:#ef4444}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,#021024 0%,#071427 100%);color:#e6f6ff;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+  .wrap{width:100%;max-width:980px}
+  h1{font-size:20px;margin:0 0 8px}
+  .grid{display:grid;grid-template-columns:1fr 340px;gap:18px}
+  .card{background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);padding:14px;border-radius:12px;box-shadow:0 8px 30px rgba(2,6,23,0.6)}
+  .vis{background:radial-gradient(circle at 20% 20%,rgba(255,220,120,0.06),transparent 20%);border-radius:10px;padding:12px;text-align:center}
+  svg{max-width:100%;height:auto;display:block;margin:0 auto}
+  .controls{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+  .choices{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  button{padding:10px;border-radius:8px;border:none;background:linear-gradient(90deg,#1f6feb,#7dd3fc);color:#022;cursor:pointer;font-weight:700}
+  .muted{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted);font-weight:600}
+  .status{padding:10px;border-radius:8px;text-align:center}
+  .right{background:linear-gradient(90deg,rgba(22,163,74,0.14),transparent);border:1px solid rgba(22,163,74,0.18);color:var(--good)}
+  .wrong{background:linear-gradient(90deg,rgba(239,68,68,0.12),transparent);border:1px solid rgba(239,68,68,0.18);color:var(--bad)}
+  .small{font-size:13px;color:var(--muted)}
+  footer{margin-top:12px;color:var(--muted);font-size:13px}
+  @media (max-width:860px){.grid{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+      <h1>Holdfázis-kvíz — Föld‑Nap‑Hold</h1>
+      <div style="margin-left:auto;color:var(--muted);font-size:13px">5 kérdés — utána összegzés</div>
+    </header>
+
+    <div class="grid">
+      <div class="card vis">
+        <div style="font-weight:700;margin-bottom:6px">Ábrázolás</div>
+        <svg id="universe" viewBox="-300 -200 600 400" width="100%" height="320" aria-label="Föld Nap Hold ábra" role="img">
+          <!-- Nap középpontban a bal oldalon -->
+          <defs>
+            <radialGradient id="sunGrad"><stop offset="0%" stop-color="#fff4c3"/><stop offset="60%" stop-color="#ffd166"/><stop offset="100%" stop-color="#ff7a18"/></radialGradient>
+            <radialGradient id="earthGrad"><stop offset="0%" stop-color="#bfefff"/><stop offset="100%" stop-color="#2b9cff"/></radialGradient>
+            <radialGradient id="moonGrad"><stop offset="0%" stop-color="#ffffff"/><stop offset="100%" stop-color="#d2d6db"/></radialGradient>
+          </defs>
+
+          <!-- Nap -->
+          <g id="sunGroup">
+            <circle id="sun" cx="-220" cy="0" r="36" fill="url(#sunGrad)" filter="" />
+            <g id="sunGlow"></g>
+          </g>
+
+          <!-- Föld pálya -->
+          <g id="earthOrbit">
+            <circle cx="0" cy="0" r="140" fill="none" stroke="rgba(255,255,255,0.03)" stroke-dasharray="4 6" />
+          </g>
+
+          <!-- Föld és Hold (Föld a pálya mentén) -->
+          <g id="system">
+            <g id="earthGroup" transform="translate(0,0)">
+              <circle id="earth" cx="0" cy="0" r="18" fill="url(#earthGrad)"/>
+              <g id="moonOrbit" transform="translate(0,0)">
+                <circle cx="0" cy="0" r="36" fill="none" stroke="rgba(255,255,255,0.02)" />
+                <circle id="moon" cx="36" cy="0" r="8" fill="url(#moonGrad)" />
+                <!-- shadow mask for moon (phase) -->
+                <mask id="moonMask">
+                  <rect x="-100" y="-100" width="200" height="200" fill="white" />
+                  <circle id="maskCircle" cx="36" cy="0" r="8" fill="black" />
+                </mask>
+                <circle id="moonPhase" cx="36" cy="0" r="8" fill="#111827" mask="url(#moonMask)" opacity="0.95" />
+              </g>
+            </g>
+          </g>
+
+          <!-- guide labels -->
+          <text id="phaseLabel" x="0" y="-140" fill="#e6f6ff" text-anchor="middle" font-size="14" font-weight="700">—</text>
+        </svg>
+
+        <div class="small" style="margin-top:8px">A Nap a bal oldalon látható. A Föld egy nagy pályán kering a Nap körül; a Hold a Föld körüli kisebb pályán. A feladat: válaszd ki, melyik Holdfázist mutatja az ábra.</div>
+      </div>
+
+      <div class="card">
+        <div style="font-weight:700">Kvíz</div>
+        <div style="margin-top:8px" id="progress">Kérdés: <span id="qnum">0</span>/5 &nbsp; • &nbsp; Pont: <span id="score">0</span></div>
+
+        <div class="controls">
+          <div class="choices" id="choices"></div>
+          <div id="feedback" class="status" style="min-height:44px"></div>
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <button id="nextBtn" class="muted">Következő</button>
+            <button id="explainBtn" class="muted">Magyarázat</button>
+            <button id="resetBtn" class="muted">Újrakezd</button>
+          </div>
+          <div id="final" style="margin-top:8px"></div>
+        </div>
+
+        <div style="margin-top:12px" class="small">Megjegyzés: a kvíz minden kérdés után új, véletlen helyzetet mutat. 5 kérdés után az alkalmazás végleges összegzést ad.</div>
+      </div>
+    </div>
+
+    <footer>Forrás: egyszerű geometriai modell a Holdfázisok szemléltetésére.</footer>
+  </div>
+
+<script>
+const SUN = {x:-220,y:0};
+const earthOrbitR = 140;
+const moonOrbitR = 36;
+let questionCount = 0, score = 0;
+let correctPhase = null;
+let lastState = null;
+
+const phaseNames = [
+  'Újhold',
+  'Növekvő sarló',
+  'Első negyed',
+  'Dagadó Hold',
+  'Telihold',
+  'Csökkenő Hold',
+  'Utolsó negyed',
+  'Csökkenő sarló'
+];
+
+function degToRad(d){return d*Math.PI/180}
+function radToDeg(r){return r*180/Math.PI}
+function randRange(a,b){return a + Math.random()*(b-a)}
+
+function placeRandomScenario(){
+  const earthAngle = randRange(0,360);
+  const ex = earthOrbitR * Math.cos(degToRad(earthAngle));
+  const ey = earthOrbitR * Math.sin(degToRad(earthAngle));
+  const moonAngle = randRange(0,360);
+  const mx = ex + moonOrbitR * Math.cos(degToRad(moonAngle));
+  const my = ey + moonOrbitR * Math.sin(degToRad(moonAngle));
+  lastState = {ex,ey,mx,my,earthAngle,moonAngle};
+  const vSun = {x: SUN.x - ex, y: SUN.y - ey};
+  const vMoon = {x: mx - ex, y: my - ey};
+  const dot = vSun.x*vMoon.x + vSun.y*vMoon.y;
+  const magS = Math.hypot(vSun.x,vSun.y);
+  const magM = Math.hypot(vMoon.x,vMoon.y);
+  let cosEl = dot/(magS*magM);
+  cosEl = Math.max(-1, Math.min(1, cosEl));
+  let elRad = Math.acos(cosEl);
+  const cross = vSun.x*vMoon.y - vSun.y*vMoon.x;
+  let elDeg = radToDeg(elRad);
+  if(cross < 0) elDeg = 360 - elDeg;
+  const sector = Math.round(elDeg / 45) % 8;
+  correctPhase = sector;
+  renderScene(lastState, elDeg);
+  populateChoices();
+}
+
+function renderScene(state, elDeg){
+  const earthGroup = document.getElementById('earthGroup');
+  earthGroup.setAttribute('transform', `translate(${state.ex},${state.ey})`);
+  const moonOrbit = document.getElementById('moonOrbit');
+  moonOrbit.setAttribute('transform', `translate(0,0)`);
+  const moon = document.getElementById('moon');
+  moon.setAttribute('cx', (state.mx - state.ex));
+  moon.setAttribute('cy', (state.my - state.ey));
+  document.getElementById('moonPhase').setAttribute('cx', (state.mx - state.ex));
+  document.getElementById('moonPhase').setAttribute('cy', (state.my - state.ey));
+  document.getElementById('maskCircle').setAttribute('cx', (state.mx - state.ex));
+  document.getElementById('maskCircle').setAttribute('cy', (state.my - state.ey));
+  const lbl = document.getElementById('phaseLabel');
+  lbl.textContent = `Elongáció: ${elDeg.toFixed(0)}°`;
+  const sunRel = {x: SUN.x - state.mx, y: SUN.y - state.my};
+  const sunAngle = Math.atan2(sunRel.y, sunRel.x);
+  const offset = 10;
+  const maskCircle = document.getElementById('maskCircle');
+  const mx_rel = state.mx - state.ex;
+  const my_rel = state.my - state.ey;
+  const mcx = mx_rel + Math.cos(sunAngle) * offset;
+  const mcy = my_rel + Math.sin(sunAngle) * offset;
+  maskCircle.setAttribute('cx', mcx);
+  maskCircle.setAttribute('cy', mcy);
+}
+
+function populateChoices(){
+  const container = document.getElementById('choices');
+  container.innerHTML = '';
+  const options = new Set();
+  options.add(correctPhase);
+  while(options.size < 4){ options.add(Math.floor(Math.random()*8)); }
+  const arr = Array.from(options).sort(()=>Math.random()-0.5);
+  arr.forEach(idx=>{
+    const b = document.createElement('button');
+    b.textContent = phaseNames[idx];
+    b.onclick = ()=>handleAnswer(idx,b);
+    container.appendChild(b);
+  });
+}
+
+function handleAnswer(selectedBtnIdx, btnElement){
+  const feedback = document.getElementById('feedback');
+  if(document.body.dataset.awaiting) return;
+  document.body.dataset.awaiting = '1';
+  const isCorrect = selectedBtnIdx === correctPhase;
+  if(isCorrect){ score++; feedback.className='status right'; feedback.textContent = 'Helyes!'; }
+  else { feedback.className='status wrong'; feedback.textContent = 'Helytelen — helyes válasz: ' + phaseNames[correctPhase]; }
+  questionCount++;
+  updateProgress();
+  btnElement.style.outline = isCorrect ? '3px solid rgba(22,163,74,0.22)' : '3px solid rgba(239,68,68,0.16)';
+  setTimeout(()=>{ btnElement.style.outline=''; }, 900);
+  if(questionCount >= 5){
+    setTimeout(()=>finalizeQuiz(), 900);
+  } else {
+    setTimeout(()=>{
+      document.body.dataset.awaiting = '';
+      document.getElementById('feedback').textContent='';
+      placeRandomScenario();
+    }, 1100);
+  }
+}
+
+function updateProgress(){
+  document.getElementById('qnum').textContent = questionCount;
+  document.getElementById('score').textContent = score;
+}
+
+function finalizeQuiz(){
+  document.body.dataset.awaiting = '';
+  document.getElementById('final').innerHTML = `<div style="padding:12px;border-radius:8px;background:linear-gradient(90deg,rgba(255,209,102,0.07),transparent);font-weight:700">Végső eredmény: ${score}/5 pont<br><span class=\"small\">Kattints az Újrakezd gombra egy új körhöz.</span></div>`;
+  document.getElementById('choices').querySelectorAll('button').forEach(b=>b.disabled=true);
+}
+
+document.getElementById('nextBtn').addEventListener('click', ()=>{
+  if(questionCount >=5) return;
+  placeRandomScenario();
+});
+
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  questionCount = 0; score = 0; correctPhase = null; lastState=null; document.getElementById('final').innerHTML=''; updateProgress(); document.getElementById('feedback').textContent=''; placeRandomScenario();
+});
+
+document.getElementById('explainBtn').addEventListener('click', ()=>{
+  const explan = explainPhase(correctPhase);
+  const fb = document.getElementById('feedback');
+  fb.className='status'; fb.innerHTML = `<strong>Magyarázat:</strong> ${explan}`;
+});
+
+function explainPhase(idx){
+  if(idx === null) return 'Nincs aktív kérdés.';
+  switch(idx){
+    case 0: return 'Újhold: a Hold a Föld felől nézve a Nap felé áll — a megvilágított oldala távol van tőlünk.';
+    case 1: return 'Növekvő sarló: a Hold részben megvilágított, a növekedés (waxing) felé tart.';
+    case 2: return 'Első negyed: a Hold fele megvilágított, a Földről jobbra fényes (növekvő negyed).';
+    case 3: return 'Dagadó Hold: a Hold több mint fele megvilágított, közelít a teliholdhoz.';
+    case 4: return 'Telihold: a Hold teljesen megvilágított a Földről nézve (Nap és Hold ellentétes oldalon).';
+    case 5: return 'Csökkenő Hold: a Hold telihold után csökken (waning) és több mint fele megvilágított.';
+    case 6: return 'Utolsó negyed: a Hold másik fele megvilágított (a fény lentebb helyezkedik el).';
+    case 7: return 'Csökkenő sarló: a Hold kicsi megvilágított sarló formában, a
